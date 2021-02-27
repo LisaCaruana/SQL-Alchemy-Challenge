@@ -1,5 +1,4 @@
 import numpy as np
-
 import sqlalchemy
 from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.orm import Session
@@ -88,31 +87,43 @@ def temp_observations():
     temp_list=list(np.ravel(station_temp))
     return jsonify(temp_list)
 
+#  * Return a JSON list of the minimum temperature, the average temperature, 
+#  and the max temperature for a given start or start-end range.
 
-# look up how to convert a list of tuples into a dictionary
-# use for next one:   all_names = list(np.ravel(results)) np.ravel is for unraveling a list of tuples with one value in the tuples 
-# @app.route("/api/v1.0/passengers")
-# def passengers():
-#     # Create our session (link) from Python to the DB
-#     session = Session(engine)
+#   * When given the start only, calculate `TMIN`, `TAVG`, 
+#   and `TMAX` for all dates greater than and equal to the start date.
 
-#     """Return a list of passenger data including the name, age, and sex of each passenger"""
-#     # Query all passengers
-#     results = session.query(Passenger.name, Passenger.age, Passenger.sex).all()
+#   * When given the start and the end date, calculate the
+#    `TMIN`, `TAVG`, and `TMAX` for dates between the start and end date inclusive.
 
-#     session.close()
+@app.route("/api/v1.0/<start>")
+def beg_date(start):
 
-#     # Create a dictionary from the row data and append to a list of all_passengers
-#     all_passengers = []
-#     for name, age, sex in results:
-#         passenger_dict = {}
-#         passenger_dict["name"] = name
-#         passenger_dict["age"] = age
-#         passenger_dict["sex"] = sex
-#         all_passengers.append(passenger_dict)
+    sel= [func.min(measurements.tobs), func.max(measurements.tobs), func.avg(measurements.tobs)]
 
-#     return jsonify(all_passengers)
+    beg_results = session.query(*sel).\
+        filter(measurements.date>=start).all()
 
+    beg_temps = list(np.ravel(beg_results))
+    return jsonify(beg_temps)
+    
+@app.route("/api/v1.0/<start>/<end>")  
+def trip_date(start, end):
+
+    sel2= [func.min(measurements.tobs), func.max(measurements.tobs), func.avg(measurements.tobs)]
+
+    trip_results = session.query(*sel2).\
+        filter(measurements.date>=start, measurements.date<=end).all()
+
+    trip_temps = list(np.ravel(trip_results))
+    return jsonify(trip_temps)
 
 if __name__ == '__main__':
     app.run(debug=True)
+    
+#     results= session.query(*sel).\
+#         filter(measurements.date>=start).\
+#         filter(measurements.date<=end).all()
+
+#         temps= list(np.ravel(results))
+#         return jsonify(temps=temps)
